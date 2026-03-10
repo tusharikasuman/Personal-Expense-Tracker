@@ -6,7 +6,7 @@ export default function Background({ children }) {
       
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
         <LiquidEther
-          colors={['#7c3aed', '#a855f7', '#3b0764']}
+          colors={['#5227FF', '#FF9FFC', '#B19EEF']}
           mouseForce={40}
           cursorSize={200}
           autoDemo={true}
