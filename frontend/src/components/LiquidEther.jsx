@@ -94,8 +94,15 @@ export default function LiquidEther({
         this.renderer.domElement.style.width = '100%';
         this.renderer.domElement.style.height = '100%';
         this.renderer.domElement.style.display = 'block';
-        this.clock = new THREE.Clock();
-        this.clock.start();
+        this.clock = {
+  _last: performance.now(),
+  getDelta() {
+    const now = performance.now();
+    const delta = (now - this._last) / 1000;
+    this._last = now;
+    return delta;
+  }
+};
       }
       resize() {
         if (!this.container) return;
