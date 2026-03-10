@@ -1,16 +1,22 @@
 import styled from 'styled-components'
+import { useNavigate } from 'react-router-dom'
 
 const LandingPage = () => {
+  const navigate = useNavigate()
+
   return (
     <Wrapper>
       <nav className="navbar">
         <div className="logo">
           <span className="logo-text">WalletWise</span>
         </div>
-        <div className="nav-links">
-          <a href="#features">Features</a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
+        <div className="nav-buttons">
+          <button className="nav-login" onClick={() => navigate('/login')}>
+            Login
+          </button>
+          <button className="nav-signup" onClick={() => navigate('/signup')}>
+            Sign Up
+          </button>
         </div>
       </nav>
 
@@ -26,7 +32,7 @@ const LandingPage = () => {
         </p>
         <div className="hero-buttons">
           <button className="btn-primary">Get Started</button>
-          <button className="btn-secondary">Create Account</button>
+          <button className="btn-secondary">Learn More</button>
         </div>
       </div>
     </Wrapper>
@@ -44,55 +50,68 @@ const Wrapper = styled.div`
   font-family: 'DM Sans', sans-serif;
 
   .navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 22px;
-  width: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50px;
-  z-index: 10;
-  position: relative;
-}
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 22px;
+    width: 35%;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50px;
+    z-index: 10;
+  }
 
-.nav-links {
-  display: flex;
-  gap: 24px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.nav-links a {
-  color: white;
-  font-weight: 700;
-  text-decoration: none;
-  font-size: 15px;
-  transition: color 0.2s;
-}
-
-.nav-links a:hover {
-  color: #a855f7;
-}
-  
   .logo {
     display: flex;
     align-items: center;
-    gap: 7px;
   }
 
   .logo-text {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 700;
     background: linear-gradient(135deg, #a855f7, #7c3aed);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
+  .nav-buttons {
+    display: flex;
+    gap: 10px;
+  }
 
+  .nav-login {
+    padding: 7px 18px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: transparent;
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
+  .nav-login:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .nav-signup {
+    padding: 7px 18px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .nav-signup:hover {
+    opacity: 0.85;
+    transform: scale(0.97);
+  }
 
   .hero {
     flex: 1;
@@ -102,20 +121,6 @@ const Wrapper = styled.div`
     justify-content: center;
     text-align: center;
     gap: 20px;
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 16px;
-    border-radius: 50px;
-    background: rgba(168, 85, 247, 0.12);
-    border: 1px solid rgba(168, 85, 247, 0.25);
-    font-size: 12px;
-    font-weight: 600;
-    color: #c084fc;
-    letter-spacing: 0.5px;
   }
 
   .title {
@@ -180,45 +185,6 @@ const Wrapper = styled.div`
     background: rgba(255, 255, 255, 0.1);
     color: white;
     transform: translateY(-2px);
-  }
-
-  .stats {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    padding: 18px 40px;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 16px;
-  }
-
-  .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .stat-number {
-    font-size: 22px;
-    font-weight: 800;
-    background: linear-gradient(135deg, #a855f7, #c084fc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .stat-label {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.4);
-    font-weight: 500;
-    letter-spacing: 0.5px;
-  }
-
-  .stat-divider {
-    width: 1px;
-    height: 36px;
-    background: rgba(255, 255, 255, 0.08);
   }
 `
 
