@@ -5,6 +5,8 @@ import LandingPage from './pages/LandingPage.jsx'
 import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Expenses from './pages/Expenses.jsx'
+import Income from './pages/Income.jsx'
+
 
 function App() {
   return (
@@ -15,7 +17,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/expenses" element={<Expenses />} />
-          <Route path="/income"  element={<div style={{color:'white',padding:'100px 32px'}}>Income coming soon</div>} />
+          <Route path="/income"  element={<Income />} />
           <Route path="/budget"  element={<div style={{color:'white',padding:'100px 32px'}}>Budget coming soon</div>} />
           <Route path="/wallet"  element={<div style={{color:'white',padding:'100px 32px'}}>Wallet coming soon</div>} />
           <Route path="/savings" element={<div style={{color:'white',padding:'100px 32px'}}>Savings coming soon</div>} />
