@@ -8,6 +8,7 @@ import Expenses from './pages/Expenses.jsx'
 import Income from './pages/Income.jsx'
 import Wallet from './pages/Wallet.jsx'
 import Budget from './pages/Budget.jsx'
+import Bills from './pages/Bills.jsx'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/income"    element={<Income />} />
           <Route path="/wallet"    element={<Wallet />} />
           <Route path="/budget"    element={<Budget />} />
+          <Route path="/bills"     element={<Bills />} />
         </Routes>
       </Background>
     </BrowserRouter>
