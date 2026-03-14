@@ -7,22 +7,20 @@ import Dashboard from './pages/Dashboard.jsx'
 import Expenses from './pages/Expenses.jsx'
 import Income from './pages/Income.jsx'
 import Wallet from './pages/Wallet.jsx'
-
+import Budget from './pages/Budget.jsx'
 
 function App() {
   return (
     <BrowserRouter>
       <Background>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/"          element={<LandingPage />} />
+          <Route path="/login"     element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/income"  element={<Income />} />
-          <Route path="/budget"  element={<div style={{color:'white',padding:'100px 32px'}}>Budget coming soon</div>} />
-          <Route path="/wallet"  element={<Wallet />} />
-          <Route path="/savings" element={<div style={{color:'white',padding:'100px 32px'}}>Savings coming soon</div>} />
-          <Route path="/bills"   element={<div style={{color:'white',padding:'100px 32px'}}>Bills coming soon</div>} />
+          <Route path="/expenses"  element={<Expenses />} />
+          <Route path="/income"    element={<Income />} />
+          <Route path="/wallet"    element={<Wallet />} />
+          <Route path="/budget"    element={<Budget />} />
         </Routes>
       </Background>
     </BrowserRouter>
