@@ -10,6 +10,7 @@ import Wallet from './pages/Wallet.jsx'
 import Budget from './pages/Budget.jsx'
 import Savings from './pages/Savings.jsx'
 import Bills from './pages/Bills.jsx'
+import Signup from './pages/Signup.jsx'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Routes>
           <Route path="/"          element={<LandingPage />} />
           <Route path="/login"     element={<Login />} />
+          <Route path="/signup"    element={<Signup />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/expenses"  element={<Expenses />} />
           <Route path="/income"    element={<Income />} />
