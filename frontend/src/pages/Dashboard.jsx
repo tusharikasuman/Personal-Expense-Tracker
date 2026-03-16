@@ -1,24 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Navbar from '../components/Navbar'
-import MagicBento from '../components/MagicBento'
 import styled from 'styled-components'
 import { gsap } from 'gsap'
+import API from '../api/axios.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
-// ── Reusable ParticleCard (same logic as MagicBento) ───────────────────────
-const DEFAULT_GLOW_COLOR = '216, 159, 246'
-
+// ── Particle Card ──────────────────────────────────────────────────────────
+const DEFAULT_GLOW = '216, 159, 246'
 const createParticle = (x, y, color) => {
   const el = document.createElement('div')
-  el.style.cssText = `
-    position: absolute; width: 4px; height: 4px; border-radius: 50%;
-    background: rgba(${color}, 1); box-shadow: 0 0 6px rgba(${color}, 0.6);
-    pointer-events: none; z-index: 100; left: ${x}px; top: ${y}px;
-  `
+  el.style.cssText = `position:absolute;width:4px;height:4px;border-radius:50%;background:rgba(${color},1);box-shadow:0 0 6px rgba(${color},0.6);pointer-events:none;z-index:100;left:${x}px;top:${y}px;`
   return el
 }
-
-
-const ParticleSection = ({ children, style, className, glowColor = DEFAULT_GLOW_COLOR }) => {
+const ParticleCard = ({ children, style, className, glowColor = DEFAULT_GLOW }) => {
   const ref = useRef(null)
   const glowRef = useRef(null)
   const particlesRef = useRef([])
@@ -26,28 +20,17 @@ const ParticleSection = ({ children, style, className, glowColor = DEFAULT_GLOW_
   const isHovered = useRef(false)
   const initialized = useRef(false)
   const memoized = useRef([])
-
   const init = useCallback(() => {
     if (initialized.current || !ref.current) return
     const { width, height } = ref.current.getBoundingClientRect()
-    memoized.current = Array.from({ length: 10 }, () =>
-      createParticle(Math.random() * width, Math.random() * height, glowColor)
-    )
+    memoized.current = Array.from({ length: 10 }, () => createParticle(Math.random() * width, Math.random() * height, glowColor))
     initialized.current = true
   }, [glowColor])
-
   const clearParticles = useCallback(() => {
-    timeoutsRef.current.forEach(clearTimeout)
-    timeoutsRef.current = []
-    particlesRef.current.forEach(p => {
-      gsap.to(p, {
-        scale: 0, opacity: 0, duration: 0.3, ease: 'back.in(1.7)',
-        onComplete: () => p.parentNode?.removeChild(p)
-      })
-    })
+    timeoutsRef.current.forEach(clearTimeout); timeoutsRef.current = []
+    particlesRef.current.forEach(p => { gsap.to(p, { scale: 0, opacity: 0, duration: 0.3, ease: 'back.in(1.7)', onComplete: () => p.parentNode?.removeChild(p) }) })
     particlesRef.current = []
   }, [])
-
   const spawnParticles = useCallback(() => {
     if (!ref.current || !isHovered.current) return
     if (!initialized.current) init()
@@ -55,8 +38,7 @@ const ParticleSection = ({ children, style, className, glowColor = DEFAULT_GLOW_
       const id = setTimeout(() => {
         if (!isHovered.current || !ref.current) return
         const clone = particle.cloneNode(true)
-        ref.current.appendChild(clone)
-        particlesRef.current.push(clone)
+        ref.current.appendChild(clone); particlesRef.current.push(clone)
         gsap.fromTo(clone, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.7)' })
         gsap.to(clone, { x: (Math.random() - 0.5) * 80, y: (Math.random() - 0.5) * 80, rotation: Math.random() * 360, duration: 2 + Math.random() * 2, ease: 'none', repeat: -1, yoyo: true })
         gsap.to(clone, { opacity: 0.3, duration: 1.5, ease: 'power2.inOut', repeat: -1, yoyo: true })
@@ -64,312 +46,319 @@ const ParticleSection = ({ children, style, className, glowColor = DEFAULT_GLOW_
       timeoutsRef.current.push(id)
     })
   }, [init])
-
   useEffect(() => {
-    const el = ref.current
-    const glow = glowRef.current
+    const el = ref.current; const glow = glowRef.current
     if (!el || !glow) return
-
-    const onEnter = () => {
-      isHovered.current = true
-      spawnParticles()
-      gsap.to(glow, { opacity: 1, duration: 0.3 })
-      gsap.to(el, { boxShadow: `0 4px 30px rgba(124,58,237,0.25), 0 0 50px rgba(${glowColor},0.15)`, duration: 0.3 })
-    }
-
-    const onLeave = () => {
-      isHovered.current = false
-      clearParticles()
-      gsap.to(glow, { opacity: 0, duration: 0.3 })
-      gsap.to(el, { boxShadow: 'none', duration: 0.3 })
-      gsap.to(el, { rotateX: 0, rotateY: 0, duration: 0.4, ease: 'power2.out' })
-    }
-
+    const onEnter = () => { isHovered.current = true; spawnParticles(); gsap.to(glow, { opacity: 1, duration: 0.3 }); gsap.to(el, { boxShadow: `0 4px 30px rgba(124,58,237,0.2),0 0 50px rgba(${glowColor},0.1)`, duration: 0.3 }) }
+    const onLeave = () => { isHovered.current = false; clearParticles(); gsap.to(glow, { opacity: 0, duration: 0.3 }); gsap.to(el, { boxShadow: 'none', rotateX: 0, rotateY: 0, duration: 0.4, ease: 'power2.out' }) }
     const onMove = e => {
-      const rect = el.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      const xPct = (x / rect.width) * 100
-      const yPct = (y / rect.height) * 100
-
-      // move the glow to follow cursor
-      glow.style.background = `radial-gradient(300px circle at ${xPct}% ${yPct}%,
-        rgba(${glowColor}, 0.5) 0%,
-        rgba(${glowColor}, 0.2) 30%,
-        transparent 60%)`
-
-      // tilt effect
-      gsap.to(el, {
-        rotateX: ((y - rect.height / 2) / rect.height) * -6,
-        rotateY: ((x - rect.width / 2) / rect.width) * 6,
-        duration: 0.15, ease: 'power2.out', transformPerspective: 1000
-      })
+      const rect = el.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top
+      glow.style.background = `radial-gradient(280px circle at ${(x / rect.width) * 100}% ${(y / rect.height) * 100}%, rgba(${glowColor},0.5) 0%, rgba(${glowColor},0.15) 40%, transparent 65%)`
+      gsap.to(el, { rotateX: ((y - rect.height / 2) / rect.height) * -6, rotateY: ((x - rect.width / 2) / rect.width) * 6, duration: 0.15, ease: 'power2.out', transformPerspective: 1000 })
     }
-
     const onClick = e => {
-      const rect = el.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      const d = Math.max(
-        Math.hypot(x, y), Math.hypot(x - rect.width, y),
-        Math.hypot(x, y - rect.height), Math.hypot(x - rect.width, y - rect.height)
-      )
+      const rect = el.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top
+      const d = Math.max(Math.hypot(x, y), Math.hypot(x - rect.width, y), Math.hypot(x, y - rect.height), Math.hypot(x - rect.width, y - rect.height))
       const ripple = document.createElement('div')
-      ripple.style.cssText = `
-        position: absolute; width: ${d * 2}px; height: ${d * 2}px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(${glowColor},0.4) 0%, rgba(${glowColor},0.15) 40%, transparent 70%);
-        left: ${x - d}px; top: ${y - d}px;
-        pointer-events: none; z-index: 50;
-      `
-      el.appendChild(ripple)
-      gsap.fromTo(ripple,
-        { scale: 0, opacity: 1 },
-        { scale: 1, opacity: 0, duration: 0.8, ease: 'power2.out', onComplete: () => ripple.remove() }
-      )
+      ripple.style.cssText = `position:absolute;width:${d * 2}px;height:${d * 2}px;border-radius:50%;background:radial-gradient(circle,rgba(${glowColor},0.4) 0%,rgba(${glowColor},0.15) 40%,transparent 70%);left:${x - d}px;top:${y - d}px;pointer-events:none;z-index:50;`
+      el.appendChild(ripple); gsap.fromTo(ripple, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 0.8, ease: 'power2.out', onComplete: () => ripple.remove() })
     }
-
-    el.addEventListener('mouseenter', onEnter)
-    el.addEventListener('mouseleave', onLeave)
-    el.addEventListener('mousemove', onMove)
-    el.addEventListener('click', onClick)
-
-    return () => {
-      isHovered.current = false
-      el.removeEventListener('mouseenter', onEnter)
-      el.removeEventListener('mouseleave', onLeave)
-      el.removeEventListener('mousemove', onMove)
-      el.removeEventListener('click', onClick)
-      clearParticles()
-    }
+    el.addEventListener('mouseenter', onEnter); el.addEventListener('mouseleave', onLeave); el.addEventListener('mousemove', onMove); el.addEventListener('click', onClick)
+    return () => { isHovered.current = false; el.removeEventListener('mouseenter', onEnter); el.removeEventListener('mouseleave', onLeave); el.removeEventListener('mousemove', onMove); el.removeEventListener('click', onClick); clearParticles() }
   }, [spawnParticles, clearParticles, glowColor])
-
   return (
     <div ref={ref} className={className} style={{ ...style, position: 'relative', overflow: 'hidden' }}>
-      {/* Border glow overlay — real div, not ::after */}
-      <div
-        ref={glowRef}
-        style={{
-          position: 'absolute', inset: 0,
-          borderRadius: 'inherit',
-          padding: '1px',
-          background: `radial-gradient(300px circle at 50% 50%, rgba(${glowColor}, 0.5) 0%, transparent 60%)`,
-          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-          WebkitMaskComposite: 'xor',
-          maskComposite: 'exclude',
-          opacity: 0,
-          pointerEvents: 'none',
-          zIndex: 10,
-          transition: 'opacity 0.3s'
-        }}
-      />
+      <div ref={glowRef} style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', padding: '1px', background: `radial-gradient(280px circle at 50% 50%, rgba(${glowColor},0.5) 0%, transparent 65%)`, WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', opacity: 0, pointerEvents: 'none', zIndex: 10 }} />
       {children}
     </div>
   )
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────
-const Modal = ({ title, onClose, children }) => (
+const Modal = ({ onClose, children }) => (
   <ModalOverlay onClick={onClose}>
-    <ModalBox onClick={e => e.stopPropagation()}>
-      <div className="modal-header">
-        <h3>{title}</h3>
-        <button className="close-btn" onClick={onClose}>✕</button>
-      </div>
-      {children}
-    </ModalBox>
+    <ModalBox onClick={e => e.stopPropagation()}>{children}</ModalBox>
   </ModalOverlay>
 )
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 const Dashboard = () => {
-  const [showAddGoal, setShowAddGoal] = useState(false)
-  const [showAddBill, setShowAddBill] = useState(false)
-  const [goalName, setGoalName]       = useState('')
-  const [goalAmount, setGoalAmount]   = useState('')
-  const [billName, setBillName]       = useState('')
-  const [billDate, setBillDate]       = useState('')
-  const [billAmount, setBillAmount]   = useState('')
+  const { user } = useAuth()
+  const [loading, setLoading]           = useState(true)
+  const [stats, setStats]               = useState(null)
+  const [transactions, setTransactions] = useState([])
+  const [budgets, setBudgets]           = useState([])
+  const [goals, setGoals]               = useState([])
+  const [bills, setBills]               = useState([])
+  const [showAddGoal, setShowAddGoal]   = useState(false)
+  const [showAddBill, setShowAddBill]   = useState(false)
+  const [goalForm, setGoalForm]         = useState({ name: '', target_amount: '' })
+  const [billForm, setBillForm]         = useState({ name: '', amount: '', due_date: '' })
 
-  const [goals, setGoals] = useState([
-    { name: '🏖 Vacation', saved: 1300, target: 2000 },
-    { name: '💻 Laptop',   saved: 600,  target: 1500 },
-  ])
-  const [bills, setBills] = useState([
-    { name: 'Rent',        due: 'Mar 15', amount: 1200 },
-    { name: 'Electricity', due: 'Mar 18', amount: 85   },
-    { name: 'Netflix',     due: 'Mar 22', amount: 15   },
-  ])
+  // ── Fetch all dashboard data ──
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const now   = new Date()
+        const month = now.getMonth() + 1
+        const year  = now.getFullYear()
 
-  const transactions = [
-    { name: 'Netflix',     date: 'Mar 12', amount: -15,    category: '🎬' },
-    { name: 'Salary',      date: 'Mar 10', amount: 3200,   category: '💼' },
-    { name: 'Groceries',   date: 'Mar 9',  amount: -84.50, category: '🛒' },
-    { name: 'Freelance',   date: 'Mar 8',  amount: 500,    category: '💻' },
-    { name: 'Electricity', date: 'Mar 7',  amount: -85,    category: '⚡' },
-    { name: 'Gym',         date: 'Mar 6',  amount: -40,    category: '🏋️' },
-  ]
+        const [dashRes, expRes, budRes, goalRes, billRes] = await Promise.all([
+          API.get(`/dashboard?month=${month}&year=${year}`),
+          API.get('/expenses?limit=6'),
+          API.get('/budget'),
+          API.get('/savings-goals'),
+          API.get('/wallet/transactions?limit=5'),
+        ])
 
-  const budgets = [
-    { name: 'Food',          pct: 68, color: '#00ff87' },
-    { name: 'Transport',     pct: 90, color: '#ff6b6b' },
-    { name: 'Entertainment', pct: 40, color: '#00e5ff' },
-    { name: 'Shopping',      pct: 75, color: '#ffaa00' },
-  ]
+        setStats(dashRes.data)
+        setTransactions(expRes.data?.expenses || expRes.data || [])
+        setBudgets(budRes.data?.budgets       || budRes.data || [])
+        setGoals(goalRes.data?.goals          || goalRes.data || [])
+        setBills(billRes.data?.transactions   || billRes.data || [])
+      } catch (err) {
+        console.error('Dashboard fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAll()
+  }, [])
 
-  const handleAddGoal = () => {
-    if (!goalName || !goalAmount) return
-    setGoals(prev => [...prev, { name: goalName, saved: 0, target: Number(goalAmount) }])
-    setGoalName(''); setGoalAmount(''); setShowAddGoal(false)
+  // ── Add goal ──
+  const handleAddGoal = async () => {
+    if (!goalForm.name || !goalForm.target_amount) return
+    try {
+      const res = await API.post('/savings-goals', {
+        name:          goalForm.name,
+        target_amount: Number(goalForm.target_amount)
+      })
+      setGoals(prev => [...prev, res.data?.goal || res.data])
+      setGoalForm({ name: '', target_amount: '' })
+      setShowAddGoal(false)
+    } catch (err) { console.error(err) }
   }
 
-  const handleAddBill = () => {
-    if (!billName || !billAmount) return
-    setBills(prev => [...prev, { name: billName, due: billDate || 'TBD', amount: Number(billAmount) }])
-    setBillName(''); setBillDate(''); setBillAmount(''); setShowAddBill(false)
+  // ── Add bill ──
+  const handleAddBill = async () => {
+    if (!billForm.name || !billForm.amount) return
+    try {
+      const res = await API.post('/wallet/pay-bill', {
+        name:     billForm.name,
+        amount:   Number(billForm.amount),
+        due_date: billForm.due_date
+      })
+      setBills(prev => [...prev, res.data?.bill || res.data])
+      setBillForm({ name: '', amount: '', due_date: '' })
+      setShowAddBill(false)
+    } catch (err) { console.error(err) }
   }
+
+  // ── Greeting ──
+  const getGreeting = () => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good morning'
+    if (h < 17) return 'Good afternoon'
+    return 'Good evening'
+  }
+
+  const fmt = (n) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  const statCards = stats ? [
+    { label: 'Total Balance',  value: `$${fmt(stats.total_balance)}`,  sub: 'Current balance',        color: '#D89FF6', icon: '💰' },
+    { label: 'Total Income',   value: `$${fmt(stats.total_income)}`,   sub: 'This month',             color: '#00ff87', icon: '📈' },
+    { label: 'Total Expenses', value: `$${fmt(stats.total_expenses)}`, sub: 'This month',             color: '#ff6b6b', icon: '📉' },
+    { label: 'Total Savings',  value: `$${fmt(stats.total_savings)}`,  sub: 'Saved so far',           color: '#00e5ff', icon: '🎯' },
+  ] : [
+    { label: 'Total Balance',  value: '—', sub: 'Loading...', color: '#D89FF6', icon: '💰' },
+    { label: 'Total Income',   value: '—', sub: 'Loading...', color: '#00ff87', icon: '📈' },
+    { label: 'Total Expenses', value: '—', sub: 'Loading...', color: '#ff6b6b', icon: '📉' },
+    { label: 'Total Savings',  value: '—', sub: 'Loading...', color: '#00e5ff', icon: '🎯' },
+  ]
+
+  const getCatIcon = (name) => {
+    const n = (name || '').toLowerCase()
+    if (n.includes('food') || n.includes('grocer')) return '🛒'
+    if (n.includes('transport')) return '🚗'
+    if (n.includes('entertainment')) return '🎬'
+    if (n.includes('health')) return '💊'
+    if (n.includes('housing') || n.includes('rent')) return '🏠'
+    if (n.includes('electric') || n.includes('util')) return '⚡'
+    if (n.includes('gym')) return '🏋️'
+    return '💳'
+  }
+
+  if (loading) return (
+    <Wrapper>
+      <Navbar />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh', color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>
+        Loading your dashboard...
+      </div>
+    </Wrapper>
+  )
 
   return (
     <Wrapper>
       <Navbar />
-      <div className="content">
+      <div className="page">
 
+        {/* Greeting */}
         <div className="page-header">
-          <h1 className="page-title">Good morning, Tusha 👋</h1>
-          <p className="page-subtitle">Here's your financial overview for March 2026</p>
+          <h1 className="page-title">{getGreeting()}, {user?.firstname || 'there'} 👋</h1>
+          <p className="page-subtitle">Here's your financial overview for {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
         </div>
 
-        {/* ── MagicBento stat cards ── */}
-        <div className="bento-wrapper">
-          <MagicBento
-            enableStars={true}
-            enableSpotlight={true}
-            enableBorderGlow={true}
-            enableTilt={true}
-            enableMagnetism={true}
-            clickEffect={true}
-            glowColor="216, 159, 246"
-            spotlightRadius={300}
-            particleCount={12}
-          />
+        {/* Stat Cards */}
+        <div className="stat-grid">
+          {statCards.map((s, i) => (
+            <ParticleCard key={i} className="stat-card">
+              <div className="s-icon">{s.icon}</div>
+              <div className="s-label">{s.label}</div>
+              <div className="s-val" style={{ color: s.color }}>{s.value}</div>
+              <div className="s-sub" style={{ color: s.color }}>{s.sub}</div>
+            </ParticleCard>
+          ))}
         </div>
 
-        {/* ── Big card: Transactions + Budget ── */}
-        <ParticleSection className="big-card glow-card">
-          <div className="big-card-section">
-            <div className="section-header">
+        {/* Big card — Transactions + Budget */}
+        <ParticleCard className="big-card">
+          {/* Recent Transactions */}
+          <div className="big-section">
+            <div className="section-head">
               <span className="section-title">🧾 Recent Transactions</span>
-              <span className="section-link">View all →</span>
+              <span className="section-link" onClick={() => window.location.href = '/expenses'}>View all →</span>
             </div>
-            <div className="tx-list">
-              {transactions.map((tx, i) => (
-                <div className="tx-row" key={i}>
-                  <div className="tx-left">
-                    <div className="tx-icon">{tx.category}</div>
-                    <div>
-                      <div className="tx-name">{tx.name}</div>
-                      <div className="tx-date">{tx.date}</div>
+            {transactions.length === 0 ? (
+              <div className="empty">No transactions yet</div>
+            ) : (
+              <div className="tx-list">
+                {transactions.map((tx, i) => (
+                  <div className="tx-row" key={i}>
+                    <div className="tx-left">
+                      <div className="tx-ico">{getCatIcon(tx.category_name)}</div>
+                      <div>
+                        <div className="tx-name">{tx.description || tx.name || 'Transaction'}</div>
+                        <div className="tx-date">{tx.date ? new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</div>
+                      </div>
                     </div>
+                    <div className="tx-amt-neg">−${fmt(tx.amount)}</div>
                   </div>
-                  <div className={`tx-amount ${tx.amount < 0 ? 'neg' : 'pos'}`}>
-                    {tx.amount < 0 ? '-' : '+'}${Math.abs(tx.amount).toFixed(2)}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="divider" />
 
-          <div className="big-card-section">
-            <div className="section-header">
+          {/* Budget Overview */}
+          <div className="big-section">
+            <div className="section-head">
               <span className="section-title">📋 Budget Overview</span>
-              <span className="section-link">Manage →</span>
+              <span className="section-link" onClick={() => window.location.href = '/budget'}>Manage →</span>
             </div>
-            <div className="budget-list">
-              {budgets.map((b, i) => (
-                <div className="budget-item" key={i}>
-                  <div className="budget-label-row">
-                    <span className="budget-name">{b.name}</span>
-                    <span className="budget-pct" style={{ color: b.color }}>{b.pct}%</span>
-                  </div>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${b.pct}%`, background: b.color }} />
-                  </div>
-                  {b.pct >= 85 && <div className="budget-warning">⚠️ Near limit!</div>}
-                </div>
-              ))}
-            </div>
+            {budgets.length === 0 ? (
+              <div className="empty">No budgets set yet</div>
+            ) : (
+              <div className="budget-list">
+                {budgets.slice(0, 4).map((b, i) => {
+                  const pct  = Math.min(Math.round((Number(b.spent || 0) / Number(b.amount || 1)) * 100), 100)
+                  const color = pct >= 85 ? '#ff6b6b' : pct >= 65 ? '#ffaa00' : '#00ff87'
+                  return (
+                    <div className="budget-item" key={i}>
+                      <div className="budget-row">
+                        <span className="budget-name">{b.category_name || b.name}</span>
+                        <span className="budget-pct" style={{ color }}>{pct}%</span>
+                      </div>
+                      <div className="bar-track">
+                        <div className="bar-fill" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                      {pct >= 85 && <div className="budget-warn">⚠️ Near limit!</div>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
-        </ParticleSection>
+        </ParticleCard>
 
-        {/* ── Bottom row ── */}
+        {/* Bottom row */}
         <div className="bottom-row">
 
-          <ParticleSection className="bottom-card glow-card">
-            <div className="section-header">
+          {/* Savings Goals */}
+          <ParticleCard className="bottom-card">
+            <div className="section-head">
               <span className="section-title">🎯 Savings Goals</span>
               <button className="add-btn" onClick={() => setShowAddGoal(true)}>＋ Add Goal</button>
             </div>
-            <div className="goals-list">
-              {goals.map((g, i) => {
-                const pct = Math.round((g.saved / g.target) * 100)
-                return (
-                  <div className="goal-item" key={i}>
-                    <div className="goal-label-row">
-                      <span className="goal-name">{g.name}</span>
-                      <span className="goal-meta">${g.saved.toLocaleString()} / ${g.target.toLocaleString()}</span>
+            {goals.length === 0 ? (
+              <div className="empty">No savings goals yet</div>
+            ) : (
+              <div className="goals-list">
+                {goals.map((g, i) => {
+                  const saved = Number(g.current_amount || g.saved || 0)
+                  const total = Number(g.target_amount  || g.target || 1)
+                  const pct   = Math.round((saved / total) * 100)
+                  return (
+                    <div className="goal-item" key={i}>
+                      <div className="budget-row">
+                        <span className="budget-name">{g.name}</span>
+                        <span className="budget-name" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>${saved.toLocaleString()} / ${total.toLocaleString()}</span>
+                      </div>
+                      <div className="bar-track">
+                        <div className="bar-fill" style={{ width: `${Math.min(pct, 100)}%`, background: 'linear-gradient(90deg,#7c3aed,#D89FF6)' }} />
+                      </div>
+                      <div className="goal-pct">{pct}% complete</div>
                     </div>
-                    <div className="bar-track">
-                      <div className="bar-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #7c3aed, #D89FF6)' }} />
-                    </div>
-                    <div className="goal-pct">{pct}% complete</div>
-                  </div>
-                )
-              })}
-            </div>
-          </ParticleSection>
+                  )
+                })}
+              </div>
+            )}
+          </ParticleCard>
 
-          <ParticleSection className="bottom-card glow-card">
-            <div className="section-header">
+          {/* Upcoming Bills */}
+          <ParticleCard className="bottom-card">
+            <div className="section-head">
               <span className="section-title">📅 Upcoming Bills</span>
               <button className="add-btn" onClick={() => setShowAddBill(true)}>＋ Add Bill</button>
             </div>
-            <div className="bills-list">
-              {bills.map((b, i) => (
-                <div className="bill-row" key={i}>
-                  <div className="bill-left">
-                    <div className="bill-name">{b.name}</div>
-                    <div className="bill-due">Due {b.due}</div>
+            {bills.length === 0 ? (
+              <div className="empty">No upcoming bills</div>
+            ) : (
+              <div className="bills-list">
+                {bills.map((b, i) => (
+                  <div className="bill-row" key={i}>
+                    <div>
+                      <div className="tx-name">{b.description || b.name}</div>
+                      <div className="tx-date">{b.due_date ? `Due ${new Date(b.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : b.created_at ? new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</div>
+                    </div>
+                    <div className="bill-amt">${fmt(b.amount)}</div>
                   </div>
-                  <div className="bill-amount">${b.amount.toLocaleString()}</div>
-                </div>
-              ))}
-            </div>
-          </ParticleSection>
+                ))}
+              </div>
+            )}
+          </ParticleCard>
 
         </div>
       </div>
 
-      {/* ── Modals ── */}
+      {/* Add Goal Modal */}
       {showAddGoal && (
-        <Modal title="🎯 Add Savings Goal" onClose={() => setShowAddGoal(false)}>
-          <div className="modal-form">
-            <input className="modal-input" placeholder="Goal name (e.g. 🏖 Vacation)" value={goalName} onChange={e => setGoalName(e.target.value)} />
-            <input className="modal-input" placeholder="Target amount ($)" type="number" value={goalAmount} onChange={e => setGoalAmount(e.target.value)} />
-            <button className="modal-submit" onClick={handleAddGoal}>Add Goal</button>
-          </div>
+        <Modal onClose={() => setShowAddGoal(false)}>
+          <div className="modal-hd">🎯 Add Savings Goal<button className="x-btn" onClick={() => setShowAddGoal(false)}>✕</button></div>
+          <div className="f-group"><label className="f-label">Goal Name</label><input className="f-input" placeholder="e.g. 🏖 Vacation" value={goalForm.name} onChange={e => setGoalForm({ ...goalForm, name: e.target.value })} /></div>
+          <div className="f-group"><label className="f-label">Target Amount ($)</label><input className="f-input" type="number" placeholder="e.g. 2000" value={goalForm.target_amount} onChange={e => setGoalForm({ ...goalForm, target_amount: e.target.value })} /></div>
+          <button className="f-submit" onClick={handleAddGoal}>Add Goal</button>
         </Modal>
       )}
 
+      {/* Add Bill Modal */}
       {showAddBill && (
-        <Modal title="📅 Add Upcoming Bill" onClose={() => setShowAddBill(false)}>
-          <div className="modal-form">
-            <input className="modal-input" placeholder="Bill name (e.g. Rent)" value={billName} onChange={e => setBillName(e.target.value)} />
-            <input className="modal-input" placeholder="Due date (e.g. Mar 25)" value={billDate} onChange={e => setBillDate(e.target.value)} />
-            <input className="modal-input" placeholder="Amount ($)" type="number" value={billAmount} onChange={e => setBillAmount(e.target.value)} />
-            <button className="modal-submit" onClick={handleAddBill}>Add Bill</button>
-          </div>
+        <Modal onClose={() => setShowAddBill(false)}>
+          <div className="modal-hd">📅 Add Bill<button className="x-btn" onClick={() => setShowAddBill(false)}>✕</button></div>
+          <div className="f-group"><label className="f-label">Bill Name</label><input className="f-input" placeholder="e.g. Rent" value={billForm.name} onChange={e => setBillForm({ ...billForm, name: e.target.value })} /></div>
+          <div className="f-group"><label className="f-label">Amount ($)</label><input className="f-input" type="number" placeholder="0.00" value={billForm.amount} onChange={e => setBillForm({ ...billForm, amount: e.target.value })} /></div>
+          <div className="f-group"><label className="f-label">Due Date</label><input className="f-input" type="date" value={billForm.due_date} onChange={e => setBillForm({ ...billForm, due_date: e.target.value })} /></div>
+          <button className="f-submit" onClick={handleAddBill}>Add Bill</button>
         </Modal>
       )}
 
@@ -379,187 +368,81 @@ const Dashboard = () => {
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 const Wrapper = styled.div`
-  min-height: 100vh;
-  color: white;
-  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh; color: white; font-family: 'DM Sans', sans-serif;
 
-  .content {
-    padding: 100px 32px 48px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    max-width: 1100px;
-    margin: 0 auto;
-  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 100px 28px 60px; }
+  .page-header { text-align: center; margin-bottom: 28px; }
+  .page-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #fff, #D89FF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+  .page-subtitle { font-size: 13px; color: rgba(255,255,255,0.38); }
 
-  .page-header { text-align: center; }
-  .page-title {
-    font-size: 28px; font-weight: 800; margin: 0 0 6px;
-    background: linear-gradient(135deg, #ffffff, #D89FF6);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .page-subtitle { font-size: 14px; color: rgba(255,255,255,0.4); margin: 0; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 13px; margin-bottom: 20px; }
+  .stat-card { background: #060010; border: 1px solid #392e4e; border-radius: 16px; padding: 20px; cursor: pointer; transition: transform 0.2s; }
+  .stat-card:hover { transform: translateY(-2px); }
+  .s-icon { font-size: 19px; opacity: 0.65; margin-bottom: 10px; }
+  .s-label { font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.38); text-transform: uppercase; letter-spacing: 0.6px; }
+  .s-val { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin: 8px 0 4px; }
+  .s-sub { font-size: 11px; }
 
-  .bento-wrapper { display: flex; justify-content: center; width: 100%; }
-
-  /* glow border effect on hover */
-  .glow-card {
-    --glow-x: 50%;
-    --glow-y: 50%;
-    --glow-intensity: 0;
-    --glow-radius: 250px;
-  }
-  .glow-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    padding: 1px;
-    background: radial-gradient(
-      var(--glow-radius) circle at var(--glow-x) var(--glow-y),
-      rgba(216,159,246, calc(var(--glow-intensity) * 0.9)) 0%,
-      rgba(216,159,246, calc(var(--glow-intensity) * 0.4)) 30%,
-      transparent 60%
-    );
-    border-radius: inherit;
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask-composite: exclude;
-    pointer-events: none;
-    z-index: 1;
-    transition: opacity 0.3s;
-  }
-  .glow-card:hover {
-    box-shadow: 0 4px 30px rgba(124,58,237,0.2), 0 0 40px rgba(216,159,246,0.1);
-  }
-
-  /* big card */
-  .big-card {
-    display: flex;
-    gap: 0;
-    padding: 0;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid #392e4e;
-    border-radius: 20px;
-    width: 100%;
-    overflow: hidden;
-  }
-  .big-card-section { flex: 1; padding: 24px; }
+  .big-card { display: flex; gap: 0; padding: 0; background: rgba(14,6,28,0.85); border: 1px solid #1e1530; border-radius: 20px; width: 100%; overflow: hidden; margin-bottom: 20px; }
+  .big-section { flex: 1; padding: 24px; }
   .divider { width: 1px; background: rgba(255,255,255,0.06); flex-shrink: 0; }
-
-  /* section header */
-  .section-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 18px;
-  }
-  .section-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .section-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.6px; }
   .section-link { font-size: 12px; color: #D89FF6; cursor: pointer; opacity: 0.8; }
   .section-link:hover { opacity: 1; }
 
-  /* transactions */
   .tx-list { display: flex; flex-direction: column; gap: 4px; }
-  .tx-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 12px; border-radius: 10px; transition: background 0.2s;
-  }
-  .tx-row:hover { background: rgba(255,255,255,0.04); }
-  .tx-left { display: flex; align-items: center; gap: 12px; }
-  .tx-icon { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; font-size: 16px; }
-  .tx-name { font-size: 13px; font-weight: 600; color: white; }
-  .tx-date { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
-  .tx-amount { font-size: 13px; font-weight: 700; }
-  .tx-amount.neg { color: #ff6b6b; }
-  .tx-amount.pos { color: #00ff87; }
+  .tx-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border-radius: 10px; transition: background 0.18s; cursor: pointer; }
+  .tx-row:hover { background: rgba(255,255,255,0.03); }
+  .tx-left { display: flex; align-items: center; gap: 11px; }
+  .tx-ico { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.055); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .tx-name { font-size: 13px; font-weight: 600; }
+  .tx-date { font-size: 11px; color: rgba(255,255,255,0.38); margin-top: 2px; }
+  .tx-amt-neg { font-size: 13px; font-weight: 700; color: #ff6b6b; }
+  .tx-amt-pos { font-size: 13px; font-weight: 700; color: #00ff87; }
 
-  /* budget */
-  .budget-list { display: flex; flex-direction: column; gap: 18px; }
-  .budget-label-row { display: flex; justify-content: space-between; margin-bottom: 7px; }
+  .budget-list { display: flex; flex-direction: column; gap: 16px; }
+  .budget-item {}
+  .budget-row { display: flex; justify-content: space-between; margin-bottom: 7px; }
   .budget-name { font-size: 13px; color: rgba(255,255,255,0.75); }
   .budget-pct { font-size: 12px; font-weight: 700; }
-  .budget-warning { font-size: 11px; color: #ff6b6b; margin-top: 4px; }
-
-  /* bars */
+  .budget-warn { font-size: 11px; color: #ff6b6b; margin-top: 4px; }
   .bar-track { background: rgba(255,255,255,0.07); border-radius: 6px; height: 6px; overflow: hidden; }
   .bar-fill { height: 6px; border-radius: 6px; transition: width 0.6s ease; }
 
-  /* bottom row */
-  .bottom-row { display: flex; gap: 16px; width: 100%; }
-  .bottom-card {
-    flex: 1; padding: 24px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid #392e4e;
-    border-radius: 20px;
-  }
+  .bottom-row { display: flex; gap: 16px; }
+  .bottom-card { flex: 1; padding: 24px; background: rgba(14,6,28,0.85); border: 1px solid #1e1530; border-radius: 20px; }
+  .add-btn { display: inline-flex; align-items: center; gap: 4px; background: rgba(216,159,246,0.1); border: 1px solid rgba(216,159,246,0.25); border-radius: 20px; padding: 5px 14px; color: #D89FF6; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+  .add-btn:hover { background: rgba(216,159,246,0.2); }
 
-  /* goals */
   .goals-list { display: flex; flex-direction: column; gap: 16px; }
-  .goal-label-row { display: flex; justify-content: space-between; margin-bottom: 7px; }
-  .goal-name { font-size: 13px; color: rgba(255,255,255,0.8); font-weight: 600; }
-  .goal-meta { font-size: 11px; color: rgba(255,255,255,0.4); }
+  .goal-item {}
   .goal-pct { font-size: 11px; color: #D89FF6; margin-top: 5px; }
 
-  /* bills */
   .bills-list { display: flex; flex-direction: column; gap: 4px; }
-  .bill-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 12px; border-radius: 10px; transition: background 0.2s;
-  }
-  .bill-row:hover { background: rgba(255,255,255,0.04); }
-  .bill-name { font-size: 13px; font-weight: 600; color: white; }
-  .bill-due { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
-  .bill-amount { font-size: 13px; font-weight: 700; color: #ffaa00; }
+  .bill-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 10px; border-radius: 10px; transition: background 0.18s; }
+  .bill-row:hover { background: rgba(255,255,255,0.03); }
+  .bill-amt { font-size: 13px; font-weight: 700; color: #ffaa00; }
 
-  /* add button */
-  .add-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(216,159,246,0.1); border: 1px solid rgba(216,159,246,0.25);
-    border-radius: 20px; padding: 5px 14px;
-    color: #D89FF6; font-size: 12px; font-weight: 600;
-    cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif;
-  }
-  .add-btn:hover { background: rgba(216,159,246,0.2); border-color: rgba(216,159,246,0.4); }
+  .empty { font-size: 13px; color: rgba(255,255,255,0.25); text-align: center; padding: 24px 0; }
 `
 
 const ModalOverlay = styled.div`
-  position: fixed; inset: 0; z-index: 999;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
-  display: flex; align-items: center; justify-content: center;
+  position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.72); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center;
 `
-
 const ModalBox = styled.div`
-  background: #12001f; border: 1px solid #392e4e;
-  border-radius: 20px; padding: 28px; width: 380px;
-  font-family: 'DM Sans', sans-serif;
-
-  .modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px;
-    h3 { color: white; font-size: 16px; font-weight: 700; }
-  }
-  .close-btn {
-    background: rgba(255,255,255,0.07); border: none; color: rgba(255,255,255,0.6);
-    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
-    font-size: 13px; display: flex; align-items: center; justify-content: center;
-  }
-  .close-btn:hover { background: rgba(255,107,107,0.15); color: #ff6b6b; }
-
-  .modal-form { display: flex; flex-direction: column; gap: 12px; }
-  .modal-input {
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px; padding: 12px 14px; color: white;
-    font-size: 13px; outline: none; font-family: 'DM Sans', sans-serif;
-    transition: border-color 0.2s;
-  }
-  .modal-input:focus { border-color: rgba(216,159,246,0.5); }
-  .modal-input::placeholder { color: rgba(255,255,255,0.3); }
-  .modal-submit {
-    background: linear-gradient(135deg, #7c3aed, #D89FF6);
-    border: none; border-radius: 10px; padding: 12px;
-    color: white; font-size: 14px; font-weight: 700;
-    cursor: pointer; transition: opacity 0.2s; font-family: 'DM Sans', sans-serif;
-  }
-  .modal-submit:hover { opacity: 0.85; }
+  background: #0d0020; border: 1px solid #281a44; border-radius: 22px; padding: 30px; width: 420px; font-family: 'DM Sans', sans-serif; animation: modalIn 0.28s ease;
+  .modal-hd { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; color: white; }
+  .x-btn { background: rgba(255,255,255,0.07); border: none; color: rgba(255,255,255,0.4); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 13px; }
+  .x-btn:hover { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+  .f-group { margin-bottom: 14px; }
+  .f-label { display: block; font-size: 11.5px; font-weight: 700; color: rgba(255,255,255,0.38); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 7px; }
+  .f-input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; padding: 11px 13px; color: white; font-size: 13px; outline: none; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s; }
+  .f-input:focus { border-color: rgba(216,159,246,0.45); }
+  .f-input::placeholder { color: rgba(255,255,255,0.3); }
+  .f-submit { width: 100%; background: linear-gradient(135deg, #7c3aed, #D89FF6); border: none; border-radius: 11px; padding: 12px; color: white; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 6px; font-family: 'DM Sans', sans-serif; transition: opacity 0.2s; }
+  .f-submit:hover { opacity: 0.85; }
+  @keyframes modalIn { from{opacity:0;transform:scale(0.94) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
 `
 
 export default Dashboard
