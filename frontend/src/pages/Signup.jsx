@@ -2,12 +2,59 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import Stepper, { Step } from '../components/Stepper'
+import API from '../api/axios.js'
 
 const Signup = () => {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ firstname: '', lastname: '', email: '', password: '', confirm: '' })
+  const [form, setForm]     = useState({ firstname: '', lastname: '', email: '', password: '', confirm: '' })
+  const [error, setError]   = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value })
+
+  // ── Validate step 1 before allowing Continue ──
+  const validateStep1 = () => {
+    if (!form.firstname.trim() || !form.lastname.trim()) {
+      setError('Please enter your first and last name'); return false
+    }
+    if (!form.email.trim() || !form.email.includes('@')) {
+      setError('Please enter a valid email address'); return false
+    }
+    setError(''); return true
+  }
+
+  // ── Validate step 2 before allowing Continue ──
+  const validateStep2 = () => {
+    if (!form.password) {
+      setError('Please enter a password'); return false
+    }
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters'); return false
+    }
+    if (form.password !== form.confirm) {
+      setError('Passwords do not match'); return false
+    }
+    setError(''); return true
+  }
+
+  // ── Called when final step Finish is clicked ──
+  const handleRegister = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      await API.post('/auth/register', {
+        firstname: form.firstname,
+        lastname:  form.lastname,
+        email:     form.email,
+        password:  form.password,
+      })
+      navigate('/login')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <Wrapper>
@@ -16,12 +63,21 @@ const Signup = () => {
         <h1 className="title">Create Account</h1>
         <p className="subtitle">Get started in just a few steps</p>
 
+        {error && <div className="error-box">{error}</div>}
+
         <Stepper
           initialStep={1}
           backButtonText="← Back"
           nextButtonText="Continue →"
-          onFinalStepCompleted={() => navigate('/login')}
+          onStepChange={() => setError('')}
+          onFinalStepCompleted={handleRegister}
+          validateStep={step => {
+            if (step === 1) return validateStep1()
+            if (step === 2) return validateStep2()
+            return true
+          }}
         >
+          {/* Step 1 — Personal Info */}
           <Step>
             <h2>Who are you? 👋</h2>
             <p>Let's start with your basic info</p>
@@ -29,20 +85,21 @@ const Signup = () => {
               <div className="field-row">
                 <div className="field">
                   <label className="label">First Name</label>
-                  <input className="f-input" name="firstname" placeholder="Tusha" value={form.firstname} onChange={handleChange} />
+                  <input className="f-input" name="firstname" placeholder="First Name" value={form.firstname} onChange={handleChange} />
                 </div>
                 <div className="field">
                   <label className="label">Last Name</label>
-                  <input className="f-input" name="lastname" placeholder="Raj" value={form.lastname} onChange={handleChange} />
+                  <input className="f-input" name="lastname" placeholder="Last Name" value={form.lastname} onChange={handleChange} />
                 </div>
               </div>
               <div className="field">
                 <label className="label">Email Address</label>
-                <input className="f-input" name="email" type="email" placeholder="tusha@example.com" value={form.email} onChange={handleChange} />
+                <input className="f-input" name="email" type="email" placeholder="abc@example.com" value={form.email} onChange={handleChange} />
               </div>
             </div>
           </Step>
 
+          {/* Step 2 — Password */}
           <Step>
             <h2>Set your password 🔒</h2>
             <p>Choose a strong password to protect your account</p>
@@ -58,6 +115,7 @@ const Signup = () => {
             </div>
           </Step>
 
+          {/* Step 3 — Review & Submit */}
           <Step>
             <h2>You're all set! 🎉</h2>
             <p>Review your details before creating your account</p>
@@ -75,6 +133,7 @@ const Signup = () => {
                 <span className="review-val">{'•'.repeat(form.password.length) || '—'}</span>
               </div>
             </div>
+            {loading && <div className="loading-text">Creating your account...</div>}
           </Step>
         </Stepper>
 
@@ -131,6 +190,30 @@ const Wrapper = styled.div`
     color: rgba(255,255,255,0.4);
     text-align: center;
     margin-bottom: 28px;
+  }
+
+  .error-box {
+    background: rgba(255,107,107,0.1);
+    border: 1px solid rgba(255,107,107,0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #ff6b6b;
+    font-size: 12.5px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .loading-text {
+    text-align: center;
+    font-size: 13px;
+    color: #D89FF6;
+    margin-top: 12px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
 
   .step-fields { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }

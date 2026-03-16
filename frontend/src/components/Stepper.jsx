@@ -10,11 +10,18 @@ const Stepper = ({
   onFinalStepCompleted,
   backButtonText = 'Back',
   nextButtonText = 'Next',
+  validateStep,
 }) => {
   const steps = Children.toArray(children)
   const [current, setCurrent] = useState(initialStep - 1)
 
-  const goNext = () => {
+ const goNext = () => {
+    // Run validation for current step if provided
+    if (validateStep) {
+      const isValid = validateStep(current + 1)
+      if (!isValid) return  // stop if validation fails
+    }
+
     if (current < steps.length - 1) {
       const next = current + 1
       setCurrent(next)
@@ -23,7 +30,7 @@ const Stepper = ({
       onFinalStepCompleted?.()
     }
   }
-
+  
   const goBack = () => {
     if (current > 0) {
       const prev = current - 1
