@@ -53,46 +53,80 @@ const Budget = () => {
   const [form, setForm] = useState({ category_id: '', amount: '', period: 'monthly' })
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const res = await API.get('/budget')
-        setBudgets(res.data?.budgets || res.data || [])
-      } catch (err) { console.error(err) }
-      finally { setLoading(false) }
+  const fetch = async () => {
+    try {
+      const now = new Date()
+
+      const res = await API.get('/budget', {
+        params: {
+          month: now.getMonth() + 1,
+          year: now.getFullYear()
+        }
+      })
+
+      setBudgets(res.data || [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    fetch()
-  }, [])
+  }
+  fetch()
+}, [])
 
   const handleAdd = async () => {
-    if (!form.category_id || !form.amount) { setError('Please fill in category and amount'); return }
-    try {
-      setSubmitting(true); setError('')
-      const res = await API.post('/budget', { category_id: Number(form.category_id), amount: Number(form.amount), period: form.period })
-      setBudgets(prev => [...prev, res.data?.budget || res.data])
-      setForm({ category_id: '', amount: '', period: 'monthly' })
-      setShowModal(false)
-    } catch (err) { setError(err.response?.data?.message || 'Failed to add budget') }
-    finally { setSubmitting(false) }
+  if (!form.category_id || !form.amount) {
+    setError('Please fill in category and amount')
+    return
   }
 
+  try {
+    setSubmitting(true)
+    setError('')
+
+    const now = new Date()
+
+    const res = await API.post('/budget', {
+      category_id: Number(form.category_id),
+      budget_amount: Number(form.amount), // ✅ IMPORTANT
+      month: now.getMonth() + 1,          // ✅ REQUIRED
+      year: now.getFullYear()             // ✅ REQUIRED
+    })
+
+    setBudgets(prev => [...prev, {
+      ...res.data,
+      category_name: CATEGORIES[form.category_id - 1]?.name,
+      amount: form.amount,
+      spent: 0
+    }])
+
+    setForm({ category_id: '', amount: '', period: 'monthly' })
+    setShowModal(false)
+
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to add budget')
+  } finally {
+    setSubmitting(false)
+  }
+}
   const handleDelete = async (id) => {
     try {
       await API.delete(`/budget/${id}`)
-      setBudgets(prev => prev.filter(b => b.budget_id !== id && b.id !== id))
+      setBudgets(prev => prev.filter(b => b.budget_id !== id && b.budget_id !== id))
     } catch (err) { console.error(err) }
   }
 
   const fmt = n => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-  const totalBudget  = budgets.reduce((s, b) => s + Number(b.amount || 0), 0)
-  const totalSpent   = budgets.reduce((s, b) => s + Number(b.spent || 0), 0)
-  const alerts       = budgets.filter(b => Number(b.spent || 0) / Number(b.amount || 1) >= 0.8)
-  const onTrack      = budgets.filter(b => Number(b.spent || 0) / Number(b.amount || 1) < 0.7)
+  const totalBudget  = budgets.reduce((s, b) => s + Number(b.budget_amount || 0), 0)
+  const totalSpent   = budgets.reduce((s, b) => s + Number(b.spent_amount || 0), 0)
+  const alerts       = budgets.filter(b => Number(b.spent_amount || 0) / Number(b.budget_amount || 1) >= 0.8)
+  const onTrack      = budgets.filter(b => Number(b.spent_amount || 0) / Number(b.budget_amount || 1) < 0.7)
 
   const getCatMeta = (name) => CATEGORIES.find(c => c.name === name) || { icon: '💳', color: '#D89FF6' }
 
   const getStatus = (b) => {
-    const pct = Number(b.spent || 0) / Number(b.amount || 1)
+    const pct = Number(b.spent_amount || 0) / Number(b.budget_amount || 1)
     if (pct >= 0.9) return { label: 'Near Limit', color: '#ff6b6b', bg: 'rgba(255,107,107,0.1)', border: 'rgba(255,107,107,0.25)' }
     if (pct >= 0.7) return { label: 'Watch Out',  color: '#ffaa00', bg: 'rgba(255,170,0,0.1)',   border: 'rgba(255,170,0,0.25)'   }
     return              { label: 'On Track',   color: '#00ff87', bg: 'rgba(0,255,135,0.1)',   border: 'rgba(0,255,135,0.25)'   }
@@ -147,11 +181,11 @@ const Budget = () => {
         ) : (
           <div className="budget-grid">
             {budgets.map((b, i) => {
-              const pct    = Math.min(Math.round((Number(b.spent || 0) / Number(b.amount || 1)) * 100), 100)
+              const pct    = Math.min(Math.round((Number(b.spent_amount || 0) / Number(b.budget_amount || 1)) * 100), 100)
               const meta   = getCatMeta(b.category_name || b.name)
               const status = getStatus(b)
               return (
-                <ParticleCard key={b.budget_id || b.id || i} className="budget-card" style={{ animationDelay: `${i * 0.06}s` }}>
+                <ParticleCard key={b.budget_id || b.budget_id || i} className="budget-card" style={{ animationDelay: `${i * 0.06}s` }}>
                   <div className="bc-top">
                     <div className="bc-icon" style={{ background: `rgba(${meta.color === '#D89FF6' ? '216,159,246' : meta.color === '#00ff87' ? '0,255,135' : meta.color === '#ff6b6b' ? '255,107,107' : meta.color === '#ffaa00' ? '255,170,0' : meta.color === '#00e5ff' ? '0,229,255' : '255,221,87'},0.12)` }}>{meta.icon}</div>
                     <button className="del-btn" onClick={() => handleDelete(b.budget_id || b.id)}>✕</button>
@@ -159,8 +193,8 @@ const Budget = () => {
                   <div className="bc-name">{b.category_name || b.name}</div>
                   <div className="bc-period">{b.period || 'monthly'}</div>
                   <div className="bc-amounts">
-                    <span className="bc-spent">${fmt(b.spent || 0)}</span>
-                    <span className="bc-limit"> / ${fmt(b.amount)}</span>
+                    <span className="bc-spent">${fmt(b.spent_amount || 0)}</span>
+                    <span className="bc-limit"> / ${fmt(b.budget_amount)}</span>
                   </div>
                   <div className="bar-track">
                     <div className="bar-fill" style={{ width: `${pct}%`, background: status.color }} />

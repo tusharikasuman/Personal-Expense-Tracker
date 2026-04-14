@@ -111,6 +111,7 @@ const StyledWrapper = styled.div`
 
   .card {
     width: 400px;
+    margin-top: 130px;
     background: linear-gradient(163deg, #D89FF6 0%, #7c3aed 100%);
     border-radius: 18px;
     padding: 1.5px;

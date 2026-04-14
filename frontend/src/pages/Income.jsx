@@ -69,29 +69,42 @@ const Income = () => {
 
   // ── Add income ──
   const handleAdd = async () => {
-    if (!form.source || !form.amount || !form.date) {
-      setError('Please fill in source, amount and date')
-      return
-    }
-    try {
-      setSubmitting(true)
-      setError('')
-      const res = await API.post('/income', {
-        source:      form.source,
-        amount:      Number(form.amount),
-        date:        form.date,
-        description: form.description,
-      })
-      const newIncome = res.data?.income || res.data
-      setIncome(prev => [newIncome, ...prev])
-      setForm({ source: '', amount: '', date: '', description: '' })
-      setShowModal(false)
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add income')
-    } finally {
-      setSubmitting(false)
-    }
+  if (!form.source || !form.amount || !form.date) {
+    setError('Please fill in source, amount and date')
+    return
   }
+
+  try {
+    setSubmitting(true)
+    setError('')
+
+    const res = await API.post('/income', {
+      income_source: form.source,
+      amount: Number(form.amount),
+      income_date: form.date,
+      description: form.description,
+    })
+
+    // ✅ Safe object creation (even if backend only sends message)
+    const newIncome = res.data?.income || {
+      income_id: Date.now(), // temp id
+      source: form.source,
+      amount: Number(form.amount),
+      date: form.date,
+      description: form.description,
+    }
+
+    setIncome(prev => [newIncome, ...prev])
+
+    setForm({ source: '', amount: '', date: '', description: '' })
+    setShowModal(false)
+
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to add income')
+  } finally {
+    setSubmitting(false)
+  }
+}
 
   // ── Delete income ──
   const handleDelete = async (id) => {
@@ -107,21 +120,64 @@ const Income = () => {
 
   // ── Filter ──
   const filtered = activeFilter === 'All'
-    ? income
-    : income.filter(i => (i.source || '').toLowerCase().includes(activeFilter.toLowerCase()))
+  ? income.filter(Boolean)
+  : income.filter(i =>
+      i &&
+      (i.source || i.income_source || '')
+        .toLowerCase()
+        .includes(activeFilter.toLowerCase())
+    )
 
   // ── Computed stats ──
-  const now = new Date()
-  const thisMonth = income.filter(i => {
-    const d = new Date(i.date || i.created_at)
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-  })
-  const thisMonthTotal = thisMonth.reduce((s, i) => s + Number(i.amount || 0), 0)
-  const salary    = income.filter(i => (i.source || '').toLowerCase().includes('salary')).reduce((s, i) => s + Number(i.amount || 0), 0)
-  const freelance = income.filter(i => (i.source || '').toLowerCase().includes('freelance')).reduce((s, i) => s + Number(i.amount || 0), 0)
-  const passive   = income.filter(i => !['salary','freelance'].some(k => (i.source || '').toLowerCase().includes(k))).reduce((s, i) => s + Number(i.amount || 0), 0)
-  const total     = income.reduce((s, i) => s + Number(i.amount || 0), 0)
+ const now = new Date()
 
+const thisMonth = income.filter(i => {
+  if (!i || (!i.date && !i.income_date && !i.created_at)) return false
+  const d = new Date(i.date || i.income_date || i.created_at)
+  return (
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear()
+  )
+})
+
+const thisMonthTotal = thisMonth.reduce(
+  (s, i) => s + Number(i.amount || 0),
+  0
+)
+
+const salary = income
+  .filter(i =>
+    i &&
+    (i.source || i.income_source || '')
+      .toLowerCase()
+      .includes('salary')
+  )
+  .reduce((s, i) => s + Number(i.amount || 0), 0)
+
+const freelance = income
+  .filter(i =>
+    i &&
+    (i.source || i.income_source || '')
+      .toLowerCase()
+      .includes('freelance')
+  )
+  .reduce((s, i) => s + Number(i.amount || 0), 0)
+
+const passive = income
+  .filter(i =>
+    i &&
+    !['salary', 'freelance'].some(k =>
+      (i.source || i.income_source || '')
+        .toLowerCase()
+        .includes(k)
+    )
+  )
+  .reduce((s, i) => s + Number(i.amount || 0), 0)
+
+const total = income.reduce(
+  (s, i) => s + Number(i?.amount || 0),
+  0
+)
   // ── Donut breakdown ──
   const salaryPct    = total ? Math.round((salary / total) * 100)    : 0
   const freelancePct = total ? Math.round((freelance / total) * 100) : 0
@@ -196,15 +252,15 @@ const Income = () => {
                 {income.slice(0, 5).map((item, i) => (
                   <div className="source-row" key={item.income_id || item.id || i}>
                     <div className="source-left">
-                      <div className="source-ico">{getSourceIcon(item.source)}</div>
+                      <div className="source-ico">{getSourceIcon(item.source || item.income_source)}</div>
                       <div>
-                        <div className="source-name">{item.source}</div>
+                        <div className="source-name">{item.source || item.income_source}</div>
                         <div className="source-desc">{item.description || 'Income entry'}</div>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div className="source-amt">+${fmt(item.amount)}</div>
-                      <div className="source-date">{item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</div>
+                      <div className="source-date">{item.date || item.income_date ? new Date(item.date || item.income_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</div>
                     </div>
                   </div>
                 ))}
@@ -255,11 +311,11 @@ const Income = () => {
             filtered.map((item, i) => (
               <div className="tbl-row" key={item.income_id || item.id || i} style={{ animationDelay: `${i * 0.04}s` }}>
                 <div className="tx-wrap">
-                  <div className="tx-ico">{getSourceIcon(item.source)}</div>
-                  <div><div className="tx-name">{item.source}</div></div>
+                  <div className="tx-ico">{getSourceIcon(item.source || item.income_source )}</div>
+                  <div><div className="tx-name">{item.source || item.income_source}</div></div>
                 </div>
                 <div className="tx-desc">{item.description || '—'}</div>
-                <div className="dt">{item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</div>
+                <div className="dt">{item.date || item.income_date ? new Date(item.date || item.income_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</div>
                 <div className="amt-pos">+${fmt(item.amount)}</div>
                 <div>
                   <button className="del-btn" onClick={() => handleDelete(item.income_id || item.id)}>🗑</button>

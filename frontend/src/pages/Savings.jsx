@@ -61,7 +61,7 @@ const Savings = () => {
     try {
       setSubmitting(true); setError('')
       const res = await API.post('/savings-goals', {
-        name: `${form.emoji} ${form.name}`,
+        goal_name: `${form.emoji} ${form.name}`,
         target_amount: Number(form.target_amount),
         deadline: form.deadline || null,
       })
@@ -91,7 +91,7 @@ const Savings = () => {
 
   const fmt = n => Number(n||0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 })
 
-  const totalSaved  = goals.reduce((s, g) => s + Number(g.current_amount||0), 0)
+  const totalSaved  = goals.reduce((s, g) => s + Number(g.saved_amount||0), 0)
   const totalTarget = goals.reduce((s, g) => s + Number(g.target_amount||0), 0)
 
   const getColor = (i) => GOAL_COLORS[i % GOAL_COLORS.length]
@@ -133,7 +133,7 @@ const Savings = () => {
               <ParticleCard key={g.goal_id||g.id||i} className="goal-card" style={{ animationDelay:`${i*0.07}s` }}>
                 <div className="goal-top-bar" style={{ background:color }} />
                 <div className="goal-header">
-                  <div className="goal-name">{g.name}</div>
+                  <div className="goal-name">{g.goal_name}</div>
                   <button className="del-btn" onClick={() => handleDelete(g.goal_id||g.id)}>🗑</button>
                 </div>
                 {g.deadline && <div className="goal-target">🗓 {new Date(g.deadline).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</div>}

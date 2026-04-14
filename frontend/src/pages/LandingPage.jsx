@@ -14,7 +14,7 @@ const LandingPage = () => {
           <button className="nav-login" onClick={() => navigate('/login')}>
             Login
           </button>
-          <button className="nav-signup" onClick={() => navigate('/signup')}>
+          <button className="nav-signup" onClick={() => navigate('/register')}>
             Sign Up
           </button>
         </div>
@@ -31,7 +31,7 @@ const LandingPage = () => {
           real-time tracking and intelligent budgeting tools.
         </p>
         <div className="hero-buttons">
-          <button className="btn-primary">Get Started</button>
+          <button className="btn-primary" onClick={() => navigate('/register')}>Get Started</button>
           <button className="btn-secondary">Learn More</button>
         </div>
       </div>
