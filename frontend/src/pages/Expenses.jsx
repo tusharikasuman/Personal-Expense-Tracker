@@ -53,7 +53,7 @@ const Expenses = () => {
   const [submitting, setSubmitting]     = useState(false)
   const [error, setError]               = useState('')
 
-  const filters = ['All', ...categories.map(c => c.name)]
+  const filters = ['All', ...categories.map(c => c.category_name)]
 
   // ── Fetch expenses + categories + summary ──
   useEffect(() => {
@@ -78,30 +78,30 @@ const Expenses = () => {
 
   // ── Add expense ──
   const handleAdd = async () => {
-    if (!form.description || !form.amount || !form.date) {
-      setError('Please fill in description, amount and date')
-      return
-    }
-    try {
-      setSubmitting(true)
-      setError('')
-      const res = await API.post('/expenses', {
-        description:    form.description,
-        amount:         Number(form.amount),
-        date:           form.date,
-        category_id:    form.category_id || null,
-        payment_method: form.payment_method,
-      })
-      const newExp = res.data?.expense || res.data
-      setExpenses(prev => [newExp, ...prev])
-      setForm({ description: '', amount: '', date: '', category_id: '', payment_method: 'Cash' })
-      setShowModal(false)
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add expense')
-    } finally {
-      setSubmitting(false)
-    }
+  if (!form.description || !form.amount || !form.date) {
+    setError('Please fill in description, amount and date')
+    return
   }
+  try {
+    setSubmitting(true)
+    setError('')
+    const res = await API.post('/expenses', {
+      note:           form.description,   // ← your DB has no "description" col, note goes to expense_notes
+      amount:         Number(form.amount),
+      expense_date:   form.date,          // ← was "date", controller needs "expense_date"
+      category_id:    form.category_id ? Number(form.category_id) : null,
+      payment_id:     null,               // ← controller expects payment_id (int), handle below
+    })
+    const newExp = res.data?.expense || res.data
+    setExpenses(prev => [newExp, ...prev])
+    setForm({ description: '', amount: '', date: '', category_id: '', payment_method: 'Cash' })
+    setShowModal(false)
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to add expense')
+  } finally {
+    setSubmitting(false)
+  }
+}
 
   // ── Delete expense ──
   const handleDelete = async (id) => {
@@ -140,10 +140,10 @@ const Expenses = () => {
     return icons[name] || '💳'
   }
 
-  const thisMonthTotal = expenses.filter(e => {
-    const d = new Date(e.date || e.created_at)
-    return d.getMonth() === new Date().getMonth() && d.getFullYear() === new Date().getFullYear()
-  }).reduce((sum, e) => sum + Number(e.amount || 0), 0)
+ const thisMonthTotal = expenses.filter(e => {
+  const d = new Date(e.expense_date || e.created_at)  // ← was e.date
+  return d.getMonth() === new Date().getMonth() && d.getFullYear() === new Date().getFullYear()
+}).reduce((sum, e) => sum + Number(e.amount || 0), 0)
 
   const biggest = expenses.reduce((max, e) => Number(e.amount) > Number(max.amount || 0) ? e : max, {})
 
@@ -223,7 +223,7 @@ const Expenses = () => {
                 <div>
                   <span className="pill" style={getCatStyle(tx.category_name)}>{tx.category_name || 'Uncategorized'}</span>
                 </div>
-                <div className="dt">{tx.date ? new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</div>
+                <div className="dt">{tx.expense_date ? new Date(tx.expense_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</div>
                 <div className="amt-neg">−${fmt(tx.amount)}</div>
                 <div>
                   <button className="del-btn" onClick={() => handleDelete(tx.expense_id || tx.id)}>🗑</button>
@@ -249,7 +249,7 @@ const Expenses = () => {
             <select className="f-sel" value={form.category_id} onChange={e => setForm({ ...form, category_id: e.target.value })}>
               <option value="">Select category</option>
               {categories.length > 0
-                ? categories.map(c => <option key={c.category_id || c.id} value={c.category_id || c.id}>{c.name}</option>)
+                ? categories.map(c => <option key={c.category_id || c.id} value={c.category_id || c.id}>{c.category_name}</option>)
                 : ['Food & Groceries','Transport','Entertainment','Health','Housing','Utilities','Shopping'].map(c => <option key={c} value={c}>{c}</option>)
               }
             </select>

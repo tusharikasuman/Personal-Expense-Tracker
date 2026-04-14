@@ -102,20 +102,26 @@ const Dashboard = () => {
         const now   = new Date()
         const month = now.getMonth() + 1
         const year  = now.getFullYear()
+const [dashRes, expRes, budRes, goalRes, billRes] = await Promise.all([
+  API.get(`/dashboard?month=${month}&year=${year}`),
+  API.get('/expenses?limit=6'),
+  API.get('/budget'),
+  API.get('/savings-goals'),
+  API.get('/wallet/transactions?limit=5'),
+])
 
-        const [dashRes, expRes, budRes, goalRes, billRes] = await Promise.all([
-          API.get(`/dashboard?month=${month}&year=${year}`),
-          API.get('/expenses?limit=6'),
-          API.get('/budget'),
-          API.get('/savings-goals'),
-          API.get('/wallet/transactions?limit=5'),
-        ])
+const dash = dashRes.data
 
-        setStats(dashRes.data)
-        setTransactions(expRes.data?.expenses || expRes.data || [])
-        setBudgets(budRes.data?.budgets       || budRes.data || [])
-        setGoals(goalRes.data?.goals          || goalRes.data || [])
-        setBills(billRes.data?.transactions   || billRes.data || [])
+setStats({
+  total_balance: dash.summary.wallet_balance,
+  total_income: dash.summary.total_income,
+  total_expenses: dash.summary.total_expenses,
+  total_savings: dash.summary.total_savings
+})
+
+setTransactions(dash.recent_expenses || [])
+setBudgets(dash.budget_comparison || [])
+setGoals(dash.savings_goals || [])
       } catch (err) {
         console.error('Dashboard fetch error:', err)
       } finally {
