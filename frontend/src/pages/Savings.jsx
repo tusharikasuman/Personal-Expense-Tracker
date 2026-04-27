@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Navbar from '../components/Navbar'
 import styled from 'styled-components'
@@ -158,7 +159,7 @@ const Savings = () => {
         </div>
       </div>
 
-      {/* Add Goal Modal */}
+  
       {showModal && (
         <Modal onClose={() => { setShowModal(false); setError('') }}>
           <div className="modal-hd">🎯 New Goal<button className="x-btn" onClick={() => setShowModal(false)}>✕</button></div>
@@ -176,7 +177,7 @@ const Savings = () => {
         </Modal>
       )}
 
-      {/* Deposit Modal */}
+      
       {depositModal && (
         <Modal onClose={() => { setDepositModal(null); setError('') }}>
           <div className="modal-hd">＋ Add to Goal<button className="x-btn" onClick={() => setDepositModal(null)}>✕</button></div>
@@ -252,3 +253,4 @@ const ModalBox = styled.div`
   @keyframes modalIn{from{opacity:0;transform:scale(0.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
 `
 export default Savings
+

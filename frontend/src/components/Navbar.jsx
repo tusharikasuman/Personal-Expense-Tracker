@@ -18,7 +18,7 @@ const Navbar = () => {
   return (
     <Wrapper>
       <div className="logo" onClick={() => navigate('/dashboard')}>
-        <span className="logo-text">💰 WalletWise</span>
+        <span className="logo-text">WalletWise</span>
       </div>
 
       <div className="floating-nav">
